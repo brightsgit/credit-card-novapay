@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Field } from "./field.component";
 import { PhoneField } from "./phone-field.component";
 import { Check } from "./check.component";
@@ -11,8 +19,25 @@ import type {
   SocialStatusCode,
   SendOtpErrorResponse,
   SendOtpResponse,
+  SendOtpRequest,
+  ScoreResponse,
+  ScoreErrorResponse,
 } from "@/services/preapprove.service";
-import { OtpModal } from "./otp-modal.component";
+
+const OtpModal = lazy(() =>
+  import("./otp-modal.component").then((m) => ({ default: m.OtpModal })),
+);
+const ResultModal = lazy(() =>
+  import("./result-modal.component").then((m) => ({ default: m.ResultModal })),
+);
+
+// set to mock OTP modal without form submission
+// const DEV_OTP_MOCK: SendOtpResponse | null = {
+//   status: "accepted",
+//   otp_sent: true,
+//   message: "OTP sent",
+//   resend_available_in_seconds: 30,
+// };
 
 type FormFields = {
   fullName: string;
@@ -65,6 +90,9 @@ export function Form() {
   const [socialStatuses, setSocialStatuses] = useState<SocialStatus[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [otpData, setOtpData] = useState<SendOtpResponse | null>(null);
+  const [scoreResult, setScoreResult] = useState<ScoreResponse | null>(null);
+  const [otpInvalid, setOtpInvalid] = useState(false);
+  const pendingRequestRef = useRef<SendOtpRequest | null>(null);
 
   useEffect(() => {
     getPreapproveInputs()
@@ -87,14 +115,16 @@ export function Form() {
       setIsSubmitting(true);
       try {
         const phone = values.phone.replace(/\s/g, "");
-        const result = await sendOtp({
+        const request: SendOtpRequest = {
           client_name: values.fullName.trim(),
           phone_number: phone,
           taxpayer_id: values.ipn,
           social_status: values.socialStatus as SocialStatusCode,
           monthly_income: Number(values.monthlyIncome),
           confirmation: true,
-        });
+        };
+        const result = await sendOtp(request);
+        pendingRequestRef.current = request;
         setOtpData(result);
       } catch (err) {
         const apiError = err as SendOtpErrorResponse;
@@ -110,15 +140,90 @@ export function Form() {
     [checkFormValidity, values],
   );
 
+  const handleOtpConfirm = useCallback(async (otpCode: string) => {
+    console.log("handleOtpConfirm");
+    const request = pendingRequestRef.current;
+    if (!request) return;
+    try {
+      // const result = await score({ ...request, otp_code: otpCode });
+      const result: ScoreResponse = {
+        decision: true,
+        existing_scoring: false,
+        client_exists: false,
+      };
+      setScoreResult(result);
+      setOtpData(null);
+    } catch (err) {
+      const apiError = err as ScoreErrorResponse;
+      if (apiError?.message === "OTP is invalid") {
+        setOtpInvalid(true);
+      } else if (apiError?.errors) {
+        console.error("Score validation errors", apiError.errors);
+      } else {
+        console.error("Score error", err);
+      }
+      throw err;
+    }
+  }, []);
+
+  const handleResultClose = useCallback(() => {
+    setOtpInvalid(false);
+    setScoreResult(null);
+  }, []);
+
+  const dismissOtpInvalid = useCallback(() => setOtpInvalid(false), []);
+
+  const resultModalProps = useMemo(() => {
+    if (otpInvalid) {
+      return {
+        title: "Щось пішло не так",
+        buttonLabel: "Спробувати ще раз",
+        onButtonClick: dismissOtpInvalid,
+      };
+    }
+    if (scoreResult?.client_exists) {
+      return {
+        title: "Ти вже з NovaPay",
+        body: "Скануй QR і дізнайся свій ліміт у застосунку",
+        bodyMobile: "Відкрий застосунок і дізнайся свій ліміт",
+        qrSrc: "/qr.svg",
+        buttonLabel: "Відкрити застосунок",
+        buttonHref: "https://novapay.ua/app",
+      };
+    }
+    if (scoreResult?.decision) {
+      return {
+        title: "Ти вже маєш рішення 🎉",
+        body: "Перевір Viber та SMS. Або скануй QR-код, щоб оформити Кредитку в застосунку NovaPay",
+        bodyMobile:
+          "Перевір Viber та SMS. Або завантаж застосунок NovaPay, щоб оформити Кредитку",
+        qrSrc: "/qr.svg",
+        buttonLabel: "Завантажити застосунок",
+        buttonHref: "https://novapay.ua/app",
+      };
+    }
+    return null;
+  }, [otpInvalid, scoreResult, dismissOtpInvalid]);
+
+  const closeOtp = useCallback(() => setOtpData(null), []);
+
   return (
     <>
-      <OtpModal
-        key={otpData?.message ?? "closed"}
-        open={otpData !== null}
-        onClose={() => setOtpData(null)}
-        otpData={otpData}
-        phone={values.phone.replace(/\s/g, "")}
-      />
+      <Suspense fallback={null}>
+        <OtpModal
+          key={otpData?.message ?? "closed"}
+          open={otpData !== null && !otpInvalid}
+          onClose={closeOtp}
+          otpData={otpData}
+          phone={values.phone.replace(/\s/g, "")}
+          onConfirm={handleOtpConfirm}
+        />
+        <ResultModal
+          open={resultModalProps !== null}
+          onClose={handleResultClose}
+          {...(resultModalProps ?? {})}
+        />
+      </Suspense>
       <form className="form" onSubmit={handleSubmit}>
         <h3 className="form__title">Дізнайся свій кредитний ліміт</h3>
 

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 export type FormValues<T> = {
   [key in keyof T]: T[key];
@@ -15,6 +15,11 @@ export default function useForm<T>({
   const [values, setValues] = useState<FormValues<T>>(initialValues);
   const [errors, setErrors] = useState<FormPartialValues<T, string>>({});
   const [touched, setTouched] = useState<FormPartialValues<T, boolean>>({});
+
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
+  const touchedRef = useRef(touched);
+  touchedRef.current = touched;
 
   const dirtyFields = useMemo(
     () =>
@@ -63,35 +68,42 @@ export default function useForm<T>({
     [validator],
   );
 
-  const handleChange = (name: keyof T, value: T[keyof T]) => {
-    setValues((prev) => ({ ...prev, [name]: value }));
-    const validationErrors = getErrorMessages(
-      { ...values, [name]: value },
-      { ...touched, [name]: true },
-    );
-    setErrors((prev) => ({ ...prev, ...validationErrors }));
-  };
+  const handleChange = useCallback(
+    (name: keyof T, value: T[keyof T]) => {
+      const nextValues = { ...valuesRef.current, [name]: value };
+      const nextTouched = { ...touchedRef.current, [name]: true };
+      setValues(nextValues);
+      setTouched(nextTouched);
+      const validationErrors = getErrorMessages(nextValues, nextTouched);
+      setErrors((prev) => ({ ...prev, ...validationErrors }));
+    },
+    [getErrorMessages],
+  );
 
-  const handleBlur = (name: keyof T) => {
-    setTouched((prev) => ({ ...prev, [name]: true }));
-    const validationErrors = getErrorMessages(values, {
-      ...touched,
-      [name]: true,
-    });
-    setErrors((prev) => ({ ...prev, ...validationErrors }));
-  };
+  const handleBlur = useCallback(
+    (name: keyof T) => {
+      const nextTouched = { ...touchedRef.current, [name]: true };
+      setTouched(nextTouched);
+      const validationErrors = getErrorMessages(valuesRef.current, nextTouched);
+      setErrors((prev) => ({ ...prev, ...validationErrors }));
+    },
+    [getErrorMessages],
+  );
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setValues(initialValues);
     setErrors({});
     setTouched({});
-  };
+  }, [initialValues]);
 
-  const resetField = (name: keyof T) => {
-    setValues((prev) => ({ ...prev, [name]: initialValues[name] }));
-    setErrors((prev) => ({ ...prev, [name]: undefined }));
-    setTouched((prev) => ({ ...prev, [name]: false }));
-  };
+  const resetField = useCallback(
+    (name: keyof T) => {
+      setValues((prev) => ({ ...prev, [name]: initialValues[name] }));
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
+      setTouched((prev) => ({ ...prev, [name]: false }));
+    },
+    [initialValues],
+  );
 
   const isFormTouched = useMemo(
     () => Object.values(touched).some((isTouched) => isTouched),
@@ -104,7 +116,8 @@ export default function useForm<T>({
   );
 
   const checkFormValidity = useCallback(() => {
-    const touchedFields = Object.keys(values).reduce(
+    const currentValues = valuesRef.current;
+    const touchedFields = Object.keys(currentValues).reduce(
       (acc, key) => {
         acc[key as keyof T] = true;
         return acc;
@@ -112,11 +125,11 @@ export default function useForm<T>({
       {} as FormPartialValues<T, boolean>,
     );
     setTouched(touchedFields);
-    const validationErrors = getErrorMessages(values, touchedFields);
+    const validationErrors = getErrorMessages(currentValues, touchedFields);
     setErrors(validationErrors);
 
     return Object.values(validationErrors).every((val) => val === "");
-  }, [values, getErrorMessages]);
+  }, [getErrorMessages]);
 
   return {
     values,

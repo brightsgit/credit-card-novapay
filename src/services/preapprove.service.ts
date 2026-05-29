@@ -80,6 +80,21 @@ export type SendOtpRequest = {
   confirmation: true;
 };
 
+export type ScoreRequest = SendOtpRequest & {
+  otp_code: string;
+};
+
+export type ScoreResponse = {
+  decision: boolean | null;
+  existing_scoring: boolean | null;
+  client_exists: boolean;
+};
+
+export type ScoreErrorResponse = {
+  message: string;
+  errors?: Array<{ field: string; message: string }>;
+};
+
 export type SendOtpResponse = {
   status: "accepted";
   otp_sent: boolean;
@@ -110,6 +125,28 @@ export async function getPreapproveInputs(): Promise<PreapproveInputs> {
 
   if (!response.ok) {
     throw new Error(`Failed to fetch preapprove inputs: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function score(data: ScoreRequest): Promise<ScoreResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}${API_ENDPOINTS.PREAPPROVE_SCORE}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    },
+  );
+
+  if (response.status === 400 || response.status === 500) {
+    const error: ScoreErrorResponse = await response.json();
+    throw error;
+  }
+
+  if (!response.ok) {
+    throw new Error(`Pre-approval process failed: ${response.status}`);
   }
 
   return response.json();

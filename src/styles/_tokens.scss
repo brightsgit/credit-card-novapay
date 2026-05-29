@@ -1,3 +1,7 @@
+:host {
+  font-family: var(--font-main);
+}
+
 :host,
 * {
   --color-primary: #690dd3;
@@ -12,8 +16,10 @@
 
   --color-text-body: #1b1c20;
 
+  --color-gray-50: #6d737e;
   --color-gray-300: #dbdfe4;
   --color-gray-500: #767f8a;
+  --color-gray-600: #464b53;
   --color-gray-800: #32383c;
   --color-gray-900: #202427;
   --color-form-border: #dabaff;

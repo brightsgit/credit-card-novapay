@@ -2,4 +2,14 @@
   display: grid;
   grid-column-gap: 1.5rem;
   grid-template-columns: 1fr 29.375rem;
+
+  @container widget (max-width: 1080px) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  @container widget (max-width: 700px) {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
 }

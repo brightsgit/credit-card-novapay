@@ -1,0 +1,66 @@
+.result-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+
+  &__title {
+    font-family: var(--font-main);
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--color-gray-800);
+    margin: 0;
+    text-align: center;
+  }
+
+  &__body {
+    font-family: var(--font-main);
+    font-size: 1rem;
+    color: var(--color-gray-50);
+    margin: 0;
+    text-align: center;
+    line-height: 1.25;
+
+    &--desktop {
+      @media (max-width: 640px) {
+        display: none;
+      }
+    }
+
+    &--mobile {
+      @media (min-width: 641px) {
+        display: none;
+      }
+    }
+  }
+
+  &__qr {
+    @media (max-width: 640px) {
+      display: none;
+    }
+  }
+
+  &__link,
+  &__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+  }
+
+  &__link {
+    @media (min-width: 641px) {
+      display: none;
+    }
+  }
+
+  &__spinner {
+    animation: result-modal-spin 0.9s linear infinite;
+  }
+}
+
+@keyframes result-modal-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

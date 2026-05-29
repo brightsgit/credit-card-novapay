@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { Modal } from "./modal.component";
 import { Button } from "./button.component";
 import type { SendOtpResponse } from "@/services/preapprove.service";
@@ -8,13 +8,57 @@ interface OtpModalProps {
   onClose: () => void;
   otpData: SendOtpResponse | null;
   phone: string;
+  onResend?: () => void;
+  onConfirm?: (otpCode: string) => Promise<void>;
 }
 
 const OTP_LENGTH = 4;
+const PHONE_MASK_RE = /(\+380)(\d{2})(\d{3})(\d{2})(\d{2})/;
 
-export function OtpModal({ open, onClose, otpData, phone }: OtpModalProps) {
+function formatTime(s: number): string {
+  const m = Math.floor(s / 60)
+    .toString()
+    .padStart(2, "0");
+  const sec = (s % 60).toString().padStart(2, "0");
+  return `${m}:${sec}`;
+}
+
+export function OtpModal({
+  open,
+  onClose,
+  otpData,
+  phone,
+  onResend,
+  onConfirm,
+}: OtpModalProps) {
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
+  const [isConfirming, setIsConfirming] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [secondsLeft, setSecondsLeft] = useState(
+    otpData?.resend_available_in_seconds ?? 0,
+  );
+  const [prevOtpData, setPrevOtpData] = useState(otpData);
+
+  if (prevOtpData !== otpData) {
+    setPrevOtpData(otpData);
+    setSecondsLeft(otpData?.resend_available_in_seconds ?? 0);
+  }
+
+  const resendIn = otpData?.resend_available_in_seconds ?? 0;
+
+  useEffect(() => {
+    if (!resendIn) return;
+    const id = setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s <= 1) {
+          clearInterval(id);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [resendIn]);
 
   const handleInput = useCallback((index: number, value: string) => {
     const digit = value.replace(/\D/g, "").slice(-1);
@@ -55,25 +99,29 @@ export function OtpModal({ open, onClose, otpData, phone }: OtpModalProps) {
     inputRefs.current[focusIndex]?.focus();
   }, []);
 
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = useCallback(async () => {
     const code = digits.join("");
     if (code.length < OTP_LENGTH) return;
-    console.log("OTP confirm", code);
-  }, [digits]);
+    if (!onConfirm) return;
+    setIsConfirming(true);
+    try {
+      await onConfirm(code);
+    } finally {
+      setIsConfirming(false);
+    }
+  }, [digits, onConfirm]);
 
-  const maskedPhone = phone.replace(
-    /(\+380)(\d{2})(\d{3})(\d{2})(\d{2})/,
-    "$1 $2 $3 ** **",
-  );
+  const maskedPhone = phone.replace(PHONE_MASK_RE, "$1 $2 $3 ** **");
 
   return (
     <Modal open={open} onClose={onClose}>
       <div className="otp-modal">
-        <h3 className="otp-modal__title">Введіть код з SMS</h3>
+        <h3 className="otp-modal__title">Підтверди номер телефону</h3>
         <p className="otp-modal__subtitle">
           Ми надіслали код підтвердження на номер
-          <br />
           <strong>{maskedPhone}</strong>
+          <br />
+          Введи його нижче
         </p>
 
         <div className="otp-modal__inputs" onPaste={handlePaste}>
@@ -97,14 +145,22 @@ export function OtpModal({ open, onClose, otpData, phone }: OtpModalProps) {
         </div>
 
         {otpData && (
-          <p className="otp-modal__resend">
-            Надіслати повторно через {otpData.resend_available_in_seconds} сек
-          </p>
+          <div className="otp-modal__resend">
+            {secondsLeft > 0 ? (
+              <span className="otp-modal__resend-text">
+                Надіслати повторно через {formatTime(secondsLeft)}
+              </span>
+            ) : (
+              <Button className="button--text" type="button" onClick={onResend}>
+                Надіслати повторно
+              </Button>
+            )}
+          </div>
         )}
 
         <Button
           type="button"
-          disabled={digits.join("").length < OTP_LENGTH}
+          disabled={digits.join("").length < OTP_LENGTH || isConfirming}
           onClick={handleConfirm}
         >
           Підтвердити

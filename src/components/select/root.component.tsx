@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { SelectContext, type SelectContextValue } from "./select.context";
 
 type SelectProps = Pick<SelectContextValue, "value" | "error" | "disabled"> & {
@@ -20,11 +20,14 @@ export function Select({
   const triggerId = `select-trigger-${id}`;
   const listboxId = `select-listbox-${id}`;
 
-  const onSelect = (newValue: string, label: string) => {
-    onValueChange(newValue);
+  const onValueChangeRef = useRef(onValueChange);
+  onValueChangeRef.current = onValueChange;
+
+  const onSelect = useCallback((newValue: string, label: string) => {
+    onValueChangeRef.current(newValue);
     setSelectedLabel(label);
     setOpen(false);
-  };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -44,20 +47,23 @@ export function Select({
       );
   }, [open]);
 
+  const contextValue = useMemo<SelectContextValue>(
+    () => ({
+      value,
+      selectedLabel,
+      onSelect,
+      open,
+      setOpen,
+      triggerId,
+      listboxId,
+      error,
+      disabled,
+    }),
+    [value, selectedLabel, onSelect, open, triggerId, listboxId, error, disabled],
+  );
+
   return (
-    <SelectContext.Provider
-      value={{
-        value,
-        selectedLabel,
-        onSelect,
-        open,
-        setOpen,
-        triggerId,
-        listboxId,
-        error,
-        disabled,
-      }}
-    >
+    <SelectContext.Provider value={contextValue}>
       <div ref={rootRef} className="select">
         <div className="select__wrapper">{children}</div>
         <span className="select__error">{error}</span>
