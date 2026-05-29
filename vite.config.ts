@@ -4,6 +4,7 @@ import compression from "vite-plugin-compression";
 import { resolve } from "path";
 
 export default defineConfig({
+  base: '/credit-card-novapay/',
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),
