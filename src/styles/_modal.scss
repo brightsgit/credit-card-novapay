@@ -1,0 +1,43 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  opacity: 0.5;
+  background: var(--color-gray-900);
+  z-index: 100;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 101;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal__content {
+  position: relative;
+  border-radius: 2rem;
+  border: 3px solid var(--color-form-border);
+  background: var(--color-white);
+  box-shadow: 0 4px 34px 0 rgba(191, 195, 204, 0.3);
+  max-width: 100%;
+  width: 100%;
+}
+
+.modal__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-gray-500);
+}

@@ -1,0 +1,62 @@
+.form-hero {
+  border-radius: var(--radius-card);
+  background: var(--color-primary);
+  padding: 6.25rem 0 8.63rem 2.5rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  overflow: hidden;
+  position: relative;
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+    flex: 1 1 auto;
+  }
+
+  &__title {
+    font-family: "Geologica", sans-serif;
+    font-weight: 700;
+    font-size: 4rem;
+    line-height: 1;
+    color: var(--color-white);
+    max-inline-size: 400px;
+
+    &-accent {
+      opacity: 0.65;
+    }
+  }
+
+  &__badges {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  &__badge {
+    font-size: 2rem;
+    line-height: 1.33;
+    font-family: "Geologica", sans-serif;
+    color: var(--color-white);
+  }
+
+  &__image-wrap {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  &__image {
+    width: 26.1rem;
+    height: auto;
+    display: block;
+    position: absolute;
+    bottom: 0;
+    top: 0;
+    margin-block: auto;
+    right: 0;
+    z-index: 1;
+  }
+}

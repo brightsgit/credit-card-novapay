@@ -1,0 +1,27 @@
+.form {
+  border-radius: var(--radius-card);
+  border: 3px solid var(--color-form-border);
+  background: var(--color-form-bg);
+  padding: 1.5rem;
+
+  .form__title {
+    color: var(--color-text-body);
+    text-align: center;
+    font-family: Geologica;
+    font-size: 1.25rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+    margin-bottom: 1.25rem;
+  }
+
+  .form__fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .form__consent {
+    margin-block-end: 1.25rem;
+  }
+}
