@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Тест ембед форми — NovaPay</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #0e0f0f;
+        color: #e2e8f0;
+        line-height: 1.6;
+      }
+
+      .page-header {
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid #1e2020;
+      }
+
+      .page-header .badge {
+        font-size: 11px;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.06);
+        color: #94a3b8;
+        padding: 2px 8px;
+        border-radius: 12px;
+        border: 1px solid #2a2d2d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .hero {
+        max-width: 760px;
+        margin: 72px auto;
+        padding: 0 24px;
+        text-align: center;
+      }
+
+      .hero h1 {
+        font-size: 36px;
+        font-weight: 700;
+        color: #f8fafc;
+        margin-bottom: 16px;
+        letter-spacing: -0.5px;
+      }
+
+      .hero p {
+        font-size: 16px;
+        color: #94a3b8;
+        margin-bottom: 28px;
+      }
+
+      .hero-cta {
+        display: inline-block;
+        background: #e63946;
+        color: #fff;
+        font-size: 15px;
+        font-weight: 600;
+        padding: 13px 30px;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: background 0.15s;
+      }
+
+      .hero-cta:hover {
+        background: #c1121f;
+      }
+
+      .section-divider {
+        border: none;
+        border-top: 1px solid #1e2020;
+        margin: 0;
+      }
+
+      .form-section {
+        width: 100%;
+        background: #0e0f0f;
+        padding: 56px 24px;
+      }
+
+      .form-section-label {
+        text-align: center;
+        font-size: 12px;
+        font-weight: 600;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-bottom: 36px;
+      }
+
+      .page-footer {
+        border-top: 1px solid #1e2020;
+        padding: 24px;
+        text-align: center;
+        font-size: 12px;
+        color: #334155;
+      }
+
+      @media (max-width: 640px) {
+        .hero h1 {
+          font-size: 26px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="page-header">
+      <span class="badge">Dev Preview</span>
+    </header>
+
+    <div class="hero">
+      <h1>Тестова сторінка для ембед форми</h1>
+      <p>
+        Ця сторінка імітує зовнішній сайт із вбудованою формою оплати NovaPay.
+        Форма розміщена нижче як повноцінна секція сторінки.
+      </p>
+      <a href="#form-section" class="hero-cta">Перейти до форми</a>
+    </div>
+
+    <hr class="section-divider" />
+
+    <section id="form-section" class="form-section">
+      <div class="form-section-label">Форма оплати NovaPay</div>
+      <div id="root"></div>
+    </section>
+
+    <footer class="page-footer">
+      © 2025 NovaPay · Тестове середовище · Реальні транзакції не виконуються
+    </footer>
+
+    <script src="./widget.js"></script>
+  </body>
+</html>

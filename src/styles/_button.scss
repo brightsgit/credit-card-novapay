@@ -1,0 +1,26 @@
+.button {
+  display: flex;
+  height: 3.25rem;
+  padding: 0 1.5rem;
+  justify-content: center;
+  align-items: center;
+  gap: 0.625rem;
+  align-self: stretch;
+  width: 100%;
+  border: none;
+  border-radius: 2.75rem;
+  background: var(--color-primary);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  color: var(--components-common-text-static-white, #fff);
+  font-family: Geologica;
+  font-size: 1.125rem;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1.25rem;
+}
