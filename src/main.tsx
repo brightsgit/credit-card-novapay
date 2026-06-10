@@ -1,6 +1,15 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import css from "./styles/main.scss?inline";
+import {
+  captureCampaignParams,
+  loadSmartScript,
+} from "./services/appsflyer.service";
+
+// Capture AppsFlyer/UTM params from this page's URL and warm up the Smart Script
+// so the OneLink is ready by the time the user reaches the result screen.
+captureCampaignParams();
+void loadSmartScript();
 
 function mountWidget(hostSelector: string) {
   const host = document.querySelector(hostSelector) ?? document.body;

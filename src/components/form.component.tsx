@@ -14,6 +14,9 @@ import { Select, SelectTrigger, SelectContent, SelectItem } from "./select";
 import { Button } from "./button.component";
 import useForm from "@/hooks/form.hook";
 import { getPreapproveInputs, sendOtp } from "@/services/preapprove.service";
+import { generateOneLink, loadSmartScript } from "@/services/appsflyer.service";
+import { AF_ONELINK_FALLBACK } from "@/constants/appsflyer.constants";
+import { logError } from "@/lib/monitoring";
 import type {
   SocialStatus,
   SocialStatusCode,
@@ -92,7 +95,34 @@ export function Form() {
   const [otpData, setOtpData] = useState<SendOtpResponse | null>(null);
   const [scoreResult, setScoreResult] = useState<ScoreResponse | null>(null);
   const [otpInvalid, setOtpInvalid] = useState(false);
+  const [oneLink, setOneLink] = useState<{
+    url: string;
+    dynamic: boolean;
+  } | null>(null);
   const pendingRequestRef = useRef<SendOtpRequest | null>(null);
+
+  const isSuccessResult = Boolean(
+    scoreResult?.client_exists || scoreResult?.decision,
+  );
+
+  useEffect(() => {
+    if (!isSuccessResult) return;
+    let cancelled = false;
+    (async () => {
+      const ready = await loadSmartScript();
+      if (cancelled) return;
+      const url = ready ? generateOneLink() : null;
+      if (url) {
+        setOneLink({ url, dynamic: true });
+      } else {
+        logError("OneLink unavailable, using fallback", { smartScript: ready });
+        setOneLink({ url: AF_ONELINK_FALLBACK, dynamic: false });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSuccessResult]);
 
   useEffect(() => {
     getPreapproveInputs()
@@ -145,6 +175,7 @@ export function Form() {
     const request = pendingRequestRef.current;
     if (!request) return;
     try {
+      console.log("otp", otpCode);
       // const result = await score({ ...request, otp_code: otpCode });
       const result: ScoreResponse = {
         decision: true,
@@ -169,6 +200,7 @@ export function Form() {
   const handleResultClose = useCallback(() => {
     setOtpInvalid(false);
     setScoreResult(null);
+    setOneLink(null);
   }, []);
 
   const dismissOtpInvalid = useCallback(() => setOtpInvalid(false), []);
@@ -186,9 +218,11 @@ export function Form() {
         title: "Ти вже з NovaPay",
         body: "Скануй QR і дізнайся свій ліміт у застосунку",
         bodyMobile: "Відкрий застосунок і дізнайся свій ліміт",
+        loading: oneLink === null,
+        oneLinkUrl: oneLink?.url,
+        dynamicQr: oneLink?.dynamic,
         qrSrc: "/qr.svg",
         buttonLabel: "Відкрити застосунок",
-        buttonHref: "https://novapay.ua/app",
       };
     }
     if (scoreResult?.decision) {
@@ -197,13 +231,15 @@ export function Form() {
         body: "Перевір Viber та SMS. Або скануй QR-код, щоб оформити Кредитку в застосунку NovaPay",
         bodyMobile:
           "Перевір Viber та SMS. Або завантаж застосунок NovaPay, щоб оформити Кредитку",
+        loading: oneLink === null,
+        oneLinkUrl: oneLink?.url,
+        dynamicQr: oneLink?.dynamic,
         qrSrc: "/qr.svg",
         buttonLabel: "Завантажити застосунок",
-        buttonHref: "https://novapay.ua/app",
       };
     }
     return null;
-  }, [otpInvalid, scoreResult, dismissOtpInvalid]);
+  }, [otpInvalid, scoreResult, dismissOtpInvalid, oneLink]);
 
   const closeOtp = useCallback(() => setOtpData(null), []);
 

@@ -18,5 +18,12 @@
     width: 7.91669rem;
     height: 7.91669rem;
     object-fit: contain;
+
+    // AppsFlyer's displayQrCode renders a <canvas> we relocate into this slot.
+    canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
   }
 }

@@ -1,5 +1,6 @@
 import { Modal } from "./modal.component";
 import { QrCode } from "./qr-code.component";
+import { AppsFlyerQrCode } from "./appsflyer-qr-code.component";
 
 const SpinnerIcon = () => (
   <svg
@@ -28,7 +29,6 @@ const SpinnerIcon = () => (
             height="4467.01"
           >
             <div
-              xmlns="http://www.w3.org/1999/xhtml"
               style={{
                 background:
                   "conic-gradient(from 90deg,rgba(33, 129, 212, 1) 0deg,rgba(33, 129, 212, 0.2) 360deg)",
@@ -56,7 +56,6 @@ const SpinnerIcon = () => (
             height="4023.22"
           >
             <div
-              xmlns="http://www.w3.org/1999/xhtml"
               style={{
                 background:
                   "conic-gradient(from 90deg,rgba(105, 13, 211, 1) 0deg,rgba(105, 13, 211, 0.1) 360deg)",
@@ -103,6 +102,8 @@ interface ResultModalProps {
   body?: string;
   bodyMobile?: string;
   qrSrc?: string;
+  oneLinkUrl?: string;
+  dynamicQr?: boolean;
   buttonLabel?: string;
   buttonHref?: string;
   onButtonClick?: () => void;
@@ -116,10 +117,13 @@ export function ResultModal({
   body,
   bodyMobile,
   qrSrc,
+  oneLinkUrl,
+  dynamicQr,
   buttonLabel,
   buttonHref,
   onButtonClick,
 }: ResultModalProps) {
+  const linkHref = oneLinkUrl ?? buttonHref;
   return (
     <Modal open={open} onClose={onClose}>
       <div className="result-modal">
@@ -140,14 +144,18 @@ export function ResultModal({
                 {bodyMobile}
               </p>
             )}
-            {qrSrc && (
+            {(dynamicQr && oneLinkUrl) || qrSrc ? (
               <div className="result-modal__qr">
-                <QrCode src={qrSrc} />
+                {dynamicQr && oneLinkUrl ? (
+                  <AppsFlyerQrCode url={oneLinkUrl} />
+                ) : (
+                  qrSrc && <QrCode src={qrSrc} />
+                )}
               </div>
-            )}
-            {buttonLabel && buttonHref && (
+            ) : null}
+            {buttonLabel && linkHref && (
               <a
-                href={buttonHref}
+                href={linkHref}
                 className="result-modal__link button"
                 target="_blank"
                 rel="noopener noreferrer"
