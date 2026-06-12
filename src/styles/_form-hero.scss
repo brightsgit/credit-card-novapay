@@ -100,6 +100,7 @@
       font-size: 2.625rem;
       line-height: 100%;
       max-inline-size: none;
+      text-wrap: balance;
     }
 
     &__badges {
@@ -114,6 +115,7 @@
       display: flex;
       justify-content: center;
       margin-inline: -1rem;
+      margin-top: -100px;
     }
 
     &__image {

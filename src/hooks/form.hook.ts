@@ -74,10 +74,8 @@ export default function useForm<T>({
   const handleChange = useCallback(
     (name: keyof T, value: T[keyof T]) => {
       const nextValues = { ...valuesRef.current, [name]: value };
-      const nextTouched = { ...touchedRef.current, [name]: true };
       setValues(nextValues);
-      setTouched(nextTouched);
-      const validationErrors = getErrorMessages(nextValues, nextTouched);
+      const validationErrors = getErrorMessages(nextValues, touchedRef.current);
       setErrors((prev) => ({ ...prev, ...validationErrors }));
     },
     [getErrorMessages],

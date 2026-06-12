@@ -97,6 +97,7 @@ export function Form() {
     values,
     valuesRef,
     errors,
+    dirtyFields,
     handleChange,
     handleBlur,
     resetField,
@@ -109,6 +110,14 @@ export function Form() {
   const hasErrors = useMemo(
     () => Object.values(errors).some((e) => !!e),
     [errors],
+  );
+
+  const allFieldsDirty = useMemo(
+    () =>
+      (Object.keys(initialValues) as (keyof FormFields)[]).every(
+        (key) => !!dirtyFields[key],
+      ),
+    [dirtyFields],
   );
 
   const [otpData, setOtpData] = useState<SendOtpResponse | null>(null);
@@ -423,12 +432,20 @@ export function Form() {
           error={errors.consent}
           className="form__consent"
         >
-          Я надаю згоду на обробку моїх персональних даних та доступ до моєї
-          кредитної історії
+          Я надаю{" "}
+          <a
+            href="https://novapay.ua/wp-content/uploads/2025/06/zgoda-personalni-dani-np.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            згоду
+          </a>{" "}
+          на обробку моїх персональних даних та доступ до моєї кредитної історії
         </Check>
 
-        <Button type="submit" disabled={isSubmitting || hasErrors}>
-          {isSubmitting ? "Відправляємо..." : "Дізнатися ліміт"}
+        <Button type="submit" disabled={isSubmitting || !allFieldsDirty || hasErrors}>
+          {isSubmitting ? "Відправляємо..." : "Дізнатися"}
         </Button>
       </form>
     </>
