@@ -90,10 +90,25 @@ export type ScoreResponse = {
   client_exists: boolean;
 };
 
-export type ScoreErrorResponse = {
-  message: string;
-  errors?: Array<{ field: string; message: string }>;
+type ScoreValidationError = {
+  keyword: string;
+  dataPath: string;
+  schemaPath: string;
+  message?: string;
 };
+
+export type ScoreErrorResponse =
+  | {
+      type: "processing";
+      code: string;
+      error: string;
+      uuid: string;
+    }
+  | {
+      type: "validation";
+      errors: ScoreValidationError[];
+      uuid: string;
+    };
 
 export type SendOtpResponse = {
   status: "accepted";
@@ -103,8 +118,11 @@ export type SendOtpResponse = {
 };
 
 export type SendOtpValidationError = {
-  field: string;
+  keyword: string;
+  dataPath: string;
   message: string;
+  type?: string;
+  uuid?: string;
 };
 
 export type SendOtpErrorResponse = {
@@ -112,7 +130,7 @@ export type SendOtpErrorResponse = {
   errors: SendOtpValidationError[];
 };
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 export async function getPreapproveInputs(): Promise<PreapproveInputs> {
   if (USE_MOCK) {
@@ -132,15 +150,15 @@ export async function getPreapproveInputs(): Promise<PreapproveInputs> {
 
 export async function score(data: ScoreRequest): Promise<ScoreResponse> {
   // TODO: remove mock and implement real API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        decision: Math.random() > 0.5,
-        existing_scoring: Math.random() > 0.5,
-        client_exists: Math.random() > 0.5,
-      });
-    }, 1000);
-  });
+  // return new Promise((resolve) => {
+  //   setTimeout(() => {
+  //     resolve({
+  //       decision: Math.random() > 0.5,
+  //       existing_scoring: Math.random() > 0.5,
+  //       client_exists: Math.random() > 0.5,
+  //     });
+  //   }, 1000);
+  // });
 
   const response = await fetch(
     `${API_BASE_URL}${API_ENDPOINTS.PREAPPROVE_SCORE}`,
@@ -165,16 +183,16 @@ export async function score(data: ScoreRequest): Promise<ScoreResponse> {
 
 export async function sendOtp(data: SendOtpRequest): Promise<SendOtpResponse> {
   // TODO: remove mock and implement real API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        status: "accepted",
-        otp_sent: true,
-        resend_available_in_seconds: 60,
-        message: "OTP has been sent to your phone number.",
-      });
-    }, 1000);
-  });
+  // return new Promise((resolve) => {
+  //   setTimeout(() => {
+  //     resolve({
+  //       status: "accepted",
+  //       otp_sent: true,
+  //       resend_available_in_seconds: 60,
+  //       message: "OTP has been sent to your phone number.",
+  //     });
+  //   }, 1000);
+  // });
 
   const response = await fetch(
     `${API_BASE_URL}${API_ENDPOINTS.PREAPPROVE_SEND_OTP}`,

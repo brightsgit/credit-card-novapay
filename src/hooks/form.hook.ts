@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 export type FormValues<T> = {
   [key in keyof T]: T[key];
@@ -17,9 +17,12 @@ export default function useForm<T>({
   const [touched, setTouched] = useState<FormPartialValues<T, boolean>>({});
 
   const valuesRef = useRef(values);
-  valuesRef.current = values;
   const touchedRef = useRef(touched);
-  touchedRef.current = touched;
+
+  useLayoutEffect(() => {
+    valuesRef.current = values;
+    touchedRef.current = touched;
+  });
 
   const dirtyFields = useMemo(
     () =>
@@ -131,8 +134,14 @@ export default function useForm<T>({
     return Object.values(validationErrors).every((val) => val === "");
   }, [getErrorMessages]);
 
+  const setFieldError = useCallback((name: keyof T, message: string) => {
+    setErrors((prev) => ({ ...prev, [name]: message }));
+    setTouched((prev) => ({ ...prev, [name]: true }));
+  }, []);
+
   return {
     values,
+    valuesRef,
     errors,
     touched,
     isFormTouched,
@@ -143,5 +152,6 @@ export default function useForm<T>({
     resetForm,
     resetField,
     checkFormValidity,
+    setFieldError,
   };
 }

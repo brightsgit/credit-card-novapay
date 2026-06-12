@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { SelectContext, type SelectContextValue } from "./select.context";
 
 type SelectProps = Pick<SelectContextValue, "value" | "error" | "disabled"> & {
@@ -21,7 +21,13 @@ export function Select({
   const listboxId = `select-listbox-${id}`;
 
   const onValueChangeRef = useRef(onValueChange);
-  onValueChangeRef.current = onValueChange;
+  useLayoutEffect(() => {
+    onValueChangeRef.current = onValueChange;
+  });
+
+  useEffect(() => {
+    if (!value) setSelectedLabel("");
+  }, [value]);
 
   const onSelect = useCallback((newValue: string, label: string) => {
     onValueChangeRef.current(newValue);

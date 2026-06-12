@@ -16,6 +16,7 @@
   &__subtitle {
     font-family: var(--font-main);
     font-size: 1rem;
+    font-weight: 300;
     color: var(--color-gray-50);
     margin: 0;
     text-align: center;
@@ -53,6 +54,25 @@
     &:focus {
       border-color: #873ddc;
     }
+
+    &--error {
+      border-color: var(--system-red-700, #eb4235);
+
+      &:hover,
+      &:focus {
+        border-color: var(--system-red-700, #eb4235);
+      }
+    }
+  }
+
+  &__error {
+    color: var(--coral-800, #de4420);
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 18px;
+    text-align: center;
+    margin: 0;
   }
 
   &__resend {

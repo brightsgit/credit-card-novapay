@@ -4,6 +4,7 @@ const PREFIX = "+380 ";
 
 function formatPhone(digits: string): string {
   const d = digits.slice(0, 9);
+  if (d.length === 0) return "";
   let result = "";
   if (d.length > 0) result += d.slice(0, 2);
   if (d.length > 2) result += " " + d.slice(2, 5);
@@ -136,7 +137,7 @@ export function PhoneField({
 
   const handleClick = () => {
     const input = inputRef.current;
-    if (!input) return;
+    if (!input || !displayValue) return;
     const pos = Math.max(input.selectionStart ?? 0, PREFIX.length);
     input.setSelectionRange(pos, pos);
   };
@@ -144,7 +145,7 @@ export function PhoneField({
   const handleFocus = () => {
     requestAnimationFrame(() => {
       const input = inputRef.current;
-      if (!input) return;
+      if (!input || !displayValue) return;
       const pos = Math.max(input.selectionStart ?? 0, PREFIX.length);
       input.setSelectionRange(pos, pos);
     });
@@ -155,6 +156,7 @@ export function PhoneField({
       <input
         ref={inputRef}
         type="tel"
+        placeholder="+380 XX XXX XX XX"
         value={displayValue}
         onChange={handleChange}
         onKeyDown={handleKeyDown}

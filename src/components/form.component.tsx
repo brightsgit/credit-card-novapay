@@ -13,7 +13,11 @@ import { Check } from "./check.component";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "./select";
 import { Button } from "./button.component";
 import useForm from "@/hooks/form.hook";
-import { getPreapproveInputs, sendOtp } from "@/services/preapprove.service";
+import {
+  getPreapproveInputs,
+  sendOtp,
+  score,
+} from "@/services/preapprove.service";
 import { generateOneLink, loadSmartScript } from "@/services/appsflyer.service";
 import { AF_ONELINK_FALLBACK } from "@/constants/appsflyer.constants";
 import { logError } from "@/lib/monitoring";
@@ -66,6 +70,14 @@ const IPN_RE = /^\d{10}$/;
 const DIGITS_ONLY_RE = /\D/g;
 const PHONE_RE = /^\+380 \d{2} \d{3} \d{2} \d{2}$/;
 
+const DATA_PATH_TO_FIELD: Record<string, keyof FormFields> = {
+  "/taxpayer_id": "ipn",
+  "/phone_number": "phone",
+  "/client_name": "fullName",
+  "/social_status": "socialStatus",
+  "/monthly_income": "monthlyIncome",
+};
+
 const validator = (values: FormFields) => ({
   fullName: FULL_NAME_RE.test(values.fullName.trim())
     ? ""
@@ -83,26 +95,41 @@ const validator = (values: FormFields) => ({
 export function Form() {
   const {
     values,
+    valuesRef,
     errors,
     handleChange,
     handleBlur,
     resetField,
     checkFormValidity,
+    setFieldError,
   } = useForm<FormFields>({ initialValues, validator });
 
   const [socialStatuses, setSocialStatuses] = useState<SocialStatus[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasErrors = useMemo(
+    () => Object.values(errors).some((e) => !!e),
+    [errors],
+  );
+
   const [otpData, setOtpData] = useState<SendOtpResponse | null>(null);
   const [scoreResult, setScoreResult] = useState<ScoreResponse | null>(null);
   const [otpInvalid, setOtpInvalid] = useState(false);
+  const [scoreError, setScoreError] = useState(false);
   const [oneLink, setOneLink] = useState<{
     url: string;
     dynamic: boolean;
   } | null>(null);
   const pendingRequestRef = useRef<SendOtpRequest | null>(null);
+  const lastOtpCodeRef = useRef<string>("");
 
-  const isSuccessResult = Boolean(
-    scoreResult?.client_exists || scoreResult?.decision,
+  const isSuccessResult = useMemo(
+    () =>
+      Boolean(
+        scoreResult?.client_exists ||
+        scoreResult?.decision ||
+        scoreResult?.existing_scoring,
+      ),
+    [scoreResult],
   );
 
   useEffect(() => {
@@ -138,19 +165,22 @@ export function Form() {
   );
 
   const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
+    async (e?: React.SyntheticEvent) => {
+      if (e) {
+        e.preventDefault();
+      }
       if (!checkFormValidity()) return;
 
+      const currentValues = valuesRef.current;
       setIsSubmitting(true);
       try {
-        const phone = values.phone.replace(/\s/g, "");
+        const phone = currentValues.phone.replace(/\s/g, "");
         const request: SendOtpRequest = {
-          client_name: values.fullName.trim(),
+          client_name: currentValues.fullName.trim(),
           phone_number: phone,
-          taxpayer_id: values.ipn,
-          social_status: values.socialStatus as SocialStatusCode,
-          monthly_income: Number(values.monthlyIncome),
+          taxpayer_id: currentValues.ipn,
+          social_status: currentValues.socialStatus as SocialStatusCode,
+          monthly_income: Number(currentValues.monthlyIncome),
           confirmation: true,
         };
         const result = await sendOtp(request);
@@ -158,8 +188,11 @@ export function Form() {
         setOtpData(result);
       } catch (err) {
         const apiError = err as SendOtpErrorResponse;
-        if (apiError?.errors) {
-          console.error("Validation errors", apiError.errors);
+        if (apiError?.errors?.length) {
+          apiError.errors.forEach((e) => {
+            const field = DATA_PATH_TO_FIELD[e.dataPath];
+            if (field) setFieldError(field, e.message);
+          });
         } else {
           console.error("Submit error", err);
         }
@@ -167,50 +200,51 @@ export function Form() {
         setIsSubmitting(false);
       }
     },
-    [checkFormValidity, values],
+    [checkFormValidity, valuesRef, setFieldError],
   );
 
   const handleOtpConfirm = useCallback(async (otpCode: string) => {
-    console.log("handleOtpConfirm");
     const request = pendingRequestRef.current;
     if (!request) return;
+    lastOtpCodeRef.current = otpCode;
     try {
-      console.log("otp", otpCode);
-      // const result = await score({ ...request, otp_code: otpCode });
-      const result: ScoreResponse = {
-        decision: true,
-        existing_scoring: false,
-        client_exists: false,
-      };
+      const result = await score({ ...request, otp_code: otpCode });
       setScoreResult(result);
       setOtpData(null);
     } catch (err) {
       const apiError = err as ScoreErrorResponse;
-      if (apiError?.message === "OTP is invalid") {
+      if (
+        (apiError?.type === "processing" &&
+          apiError?.code === "OTPCheckFailedError") ||
+        apiError.type === "validation"
+      ) {
         setOtpInvalid(true);
-      } else if (apiError?.errors) {
-        console.error("Score validation errors", apiError.errors);
-      } else {
-        console.error("Score error", err);
       }
-      throw err;
     }
   }, []);
 
   const handleResultClose = useCallback(() => {
-    setOtpInvalid(false);
+    setScoreError(false);
     setScoreResult(null);
     setOneLink(null);
   }, []);
 
+  const dismissScoreError = useCallback(() => setScoreError(false), []);
+
+  const retryScore = useCallback(async () => {
+    if (!lastOtpCodeRef.current) return;
+    setScoreResult(null);
+    await handleOtpConfirm(lastOtpCodeRef.current);
+  }, [handleOtpConfirm]);
+
   const dismissOtpInvalid = useCallback(() => setOtpInvalid(false), []);
 
   const resultModalProps = useMemo(() => {
-    if (otpInvalid) {
+    if (scoreError) {
       return {
         title: "Щось пішло не так",
         buttonLabel: "Спробувати ще раз",
-        onButtonClick: dismissOtpInvalid,
+        onButtonClick: dismissScoreError,
       };
     }
     if (scoreResult?.client_exists) {
@@ -221,11 +255,11 @@ export function Form() {
         loading: oneLink === null,
         oneLinkUrl: oneLink?.url,
         dynamicQr: oneLink?.dynamic,
-        qrSrc: "/qr.svg",
         buttonLabel: "Відкрити застосунок",
       };
     }
-    if (scoreResult?.decision) {
+
+    if (scoreResult?.existing_scoring && scoreResult?.decision) {
       return {
         title: "Ти вже маєш рішення 🎉",
         body: "Перевір Viber та SMS. Або скануй QR-код, щоб оформити Кредитку в застосунку NovaPay",
@@ -234,25 +268,86 @@ export function Form() {
         loading: oneLink === null,
         oneLinkUrl: oneLink?.url,
         dynamicQr: oneLink?.dynamic,
-        qrSrc: "/qr.svg",
+        buttonLabel: "Завантажити застосунок",
+      };
+    }
+
+    if (!scoreResult?.decision) {
+      return {
+        title: "Поки без кредитного ліміту",
+        body: "Спробуй подати заявку пізніше. А поки скануй QR-код, відкривай фіолетову картку і користуйся нею вже зараз",
+        bodyMobile:
+          "Спробуй подати заявку пізніше. А поки завантаж застосунок NovaPay, відкрий фіолетову картку і користуйся нею вже зараз",
+        loading: oneLink === null,
+        oneLinkUrl: oneLink?.url,
+        dynamicQr: oneLink?.dynamic,
         buttonLabel: "Завантажити застосунок",
       };
     }
     return null;
-  }, [otpInvalid, scoreResult, dismissOtpInvalid, oneLink]);
+  }, [scoreError, scoreResult, dismissScoreError, oneLink]);
 
   const closeOtp = useCallback(() => setOtpData(null), []);
+
+  const phoneRaw = useMemo(
+    () => values.phone.replace(/\s/g, ""),
+    [values.phone],
+  );
+
+  const handleFullNameChange = useCallback(
+    (v: string) =>
+      handleChange("fullName", v.replace(FULL_NAME_SANITIZE_RE, "")),
+    [handleChange],
+  );
+  const handleFullNameBlur = useCallback(
+    () => handleBlur("fullName"),
+    [handleBlur],
+  );
+
+  const handlePhoneChange = useCallback(
+    (v: string) => handleChange("phone", v),
+    [handleChange],
+  );
+  const handlePhoneBlur = useCallback(() => handleBlur("phone"), [handleBlur]);
+
+  const handleIpnChange = useCallback(
+    (v: string) =>
+      handleChange("ipn", v.replace(DIGITS_ONLY_RE, "").slice(0, 10)),
+    [handleChange],
+  );
+  const handleIpnBlur = useCallback(() => handleBlur("ipn"), [handleBlur]);
+
+  const handleSocialStatusChange = useCallback(
+    (v: string) => {
+      handleChange("socialStatus", v);
+      resetField("monthlyIncome");
+    },
+    [handleChange, resetField],
+  );
+
+  const handleMonthlyIncomeChange = useCallback(
+    (v: string) => handleChange("monthlyIncome", v),
+    [handleChange],
+  );
+
+  const handleConsentChange = useCallback(
+    (v: boolean) => handleChange("consent", v),
+    [handleChange],
+  );
 
   return (
     <>
       <Suspense fallback={null}>
         <OtpModal
           key={otpData?.message ?? "closed"}
-          open={otpData !== null && !otpInvalid}
+          open={otpData !== null}
           onClose={closeOtp}
           otpData={otpData}
-          phone={values.phone.replace(/\s/g, "")}
+          onResend={handleSubmit}
           onConfirm={handleOtpConfirm}
+          otpInvalid={otpInvalid}
+          onOtpInvalidReset={dismissOtpInvalid}
+          phone={phoneRaw}
         />
         <ResultModal
           open={resultModalProps !== null}
@@ -268,17 +363,15 @@ export function Form() {
             name="fullName"
             placeholder="ПІБ"
             value={values.fullName}
-            onChange={(v) =>
-              handleChange("fullName", v.replace(FULL_NAME_SANITIZE_RE, ""))
-            }
-            onBlur={() => handleBlur("fullName")}
+            onChange={handleFullNameChange}
+            onBlur={handleFullNameBlur}
             error={errors.fullName}
           />
 
           <PhoneField
             value={values.phone}
-            onChange={(v) => handleChange("phone", v)}
-            onBlur={() => handleBlur("phone")}
+            onChange={handlePhoneChange}
+            onBlur={handlePhoneBlur}
             error={errors.phone}
           />
 
@@ -286,19 +379,14 @@ export function Form() {
             name="ipn"
             placeholder="ІПН"
             value={values.ipn}
-            onChange={(v) =>
-              handleChange("ipn", v.replace(DIGITS_ONLY_RE, "").slice(0, 10))
-            }
-            onBlur={() => handleBlur("ipn")}
+            onChange={handleIpnChange}
+            onBlur={handleIpnBlur}
             error={errors.ipn}
           />
 
           <Select
             value={values.socialStatus}
-            onValueChange={(v) => {
-              handleChange("socialStatus", v);
-              resetField("monthlyIncome");
-            }}
+            onValueChange={handleSocialStatusChange}
             error={errors.socialStatus}
           >
             <SelectTrigger placeholder="Соціальний статус" />
@@ -313,7 +401,7 @@ export function Form() {
 
           <Select
             value={values.monthlyIncome}
-            onValueChange={(v) => handleChange("monthlyIncome", v)}
+            onValueChange={handleMonthlyIncomeChange}
             error={errors.monthlyIncome}
             disabled={!values.socialStatus}
           >
@@ -333,7 +421,7 @@ export function Form() {
 
         <Check
           checked={values.consent}
-          onChange={(v) => handleChange("consent", v)}
+          onChange={handleConsentChange}
           error={errors.consent}
           className="form__consent"
         >
@@ -341,7 +429,7 @@ export function Form() {
           кредитної історії
         </Check>
 
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting || hasErrors}>
           {isSubmitting ? "Відправляємо..." : "Дізнатися ліміт"}
         </Button>
       </form>

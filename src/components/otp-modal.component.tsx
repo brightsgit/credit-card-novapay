@@ -8,8 +8,10 @@ interface OtpModalProps {
   onClose: () => void;
   otpData: SendOtpResponse | null;
   phone: string;
-  onResend?: () => void;
+  onResend?: (e?: React.SyntheticEvent) => void | Promise<void>;
   onConfirm?: (otpCode: string) => Promise<void>;
+  otpInvalid?: boolean;
+  onOtpInvalidReset?: () => void;
 }
 
 const OTP_LENGTH = 4;
@@ -30,6 +32,8 @@ export function OtpModal({
   phone,
   onResend,
   onConfirm,
+  otpInvalid,
+  onOtpInvalidReset,
 }: OtpModalProps) {
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [isConfirming, setIsConfirming] = useState(false);
@@ -44,10 +48,8 @@ export function OtpModal({
     setSecondsLeft(otpData?.resend_available_in_seconds ?? 0);
   }
 
-  const resendIn = otpData?.resend_available_in_seconds ?? 0;
-
   useEffect(() => {
-    if (!resendIn) return;
+    if (!otpData?.resend_available_in_seconds) return;
     const id = setInterval(() => {
       setSecondsLeft((s) => {
         if (s <= 1) {
@@ -58,19 +60,23 @@ export function OtpModal({
       });
     }, 1000);
     return () => clearInterval(id);
-  }, [resendIn]);
+  }, [otpData]);
 
-  const handleInput = useCallback((index: number, value: string) => {
-    const digit = value.replace(/\D/g, "").slice(-1);
-    setDigits((prev) => {
-      const next = [...prev];
-      next[index] = digit;
-      return next;
-    });
-    if (digit && index < OTP_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  }, []);
+  const handleInput = useCallback(
+    (index: number, value: string) => {
+      if (otpInvalid) onOtpInvalidReset?.();
+      const digit = value.replace(/\D/g, "").slice(-1);
+      setDigits((prev) => {
+        const next = [...prev];
+        next[index] = digit;
+        return next;
+      });
+      if (digit && index < OTP_LENGTH - 1) {
+        inputRefs.current[index + 1]?.focus();
+      }
+    },
+    [otpInvalid, onOtpInvalidReset],
+  );
 
   const handleKeyDown = useCallback(
     (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -118,8 +124,7 @@ export function OtpModal({
       <div className="otp-modal">
         <h3 className="otp-modal__title">Підтверди номер телефону</h3>
         <p className="otp-modal__subtitle">
-          Ми надіслали код підтвердження на номер
-          <strong>{maskedPhone}</strong>
+          Ми надіслали код у SMS на номер {maskedPhone}
           <br />
           Введи його нижче
         </p>
@@ -131,7 +136,7 @@ export function OtpModal({
               ref={(el) => {
                 inputRefs.current[i] = el;
               }}
-              className="otp-modal__input"
+              className={`otp-modal__input${otpInvalid ? " otp-modal__input--error" : ""}`}
               type="text"
               inputMode="numeric"
               maxLength={1}
@@ -143,6 +148,9 @@ export function OtpModal({
             />
           ))}
         </div>
+        {otpInvalid && (
+          <p className="otp-modal__error">Неправильний код. Спробуй ще раз</p>
+        )}
 
         {otpData && (
           <div className="otp-modal__resend">
