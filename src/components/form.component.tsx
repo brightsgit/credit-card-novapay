@@ -64,8 +64,8 @@ const initialValues: FormFields = {
   consent: false,
 };
 
-const FULL_NAME_RE = /^[a-zA-Zа-яА-ЯіІїЇєЄґҐ'\s]+$/;
-const FULL_NAME_SANITIZE_RE = /[^a-zA-Zа-яА-ЯіІїЇєЄґҐ'\s]/g;
+const FULL_NAME_RE = /^[а-яА-ЯіІїЇєЄґҐ'\s]+$/;
+const FULL_NAME_SANITIZE_RE = /[^а-яА-ЯіІїЇєЄґҐ'\s]/g;
 const IPN_RE = /^\d{10}$/;
 const DIGITS_ONLY_RE = /\D/g;
 const PHONE_RE = /^\+380 \d{2} \d{3} \d{2} \d{2}$/;
@@ -81,15 +81,15 @@ const DATA_PATH_TO_FIELD: Record<string, keyof FormFields> = {
 const validator = (values: FormFields) => ({
   fullName: FULL_NAME_RE.test(values.fullName.trim())
     ? ""
-    : "Введіть коректне ПІБ (лише літери та пробіли)",
+    : "Вкажи ім'я та прізвище українською",
   phone: PHONE_RE.test(values.phone.replace(/_/g, "").trim())
     ? ""
-    : "Введіть коректний номер телефону",
-  ipn: IPN_RE.test(values.ipn) ? "" : "Неправильний ІПН",
+    : "Неправильний номер телефону",
+  ipn: IPN_RE.test(values.ipn) ? "" : "Неправильний ІПН – має бути 10 цифр",
   socialStatus: values.socialStatus ? "" : "Оберіть соціальний статус",
   monthlyIncome:
     Number(values.monthlyIncome) > 0 ? "" : "Введіть дохід більше 0",
-  consent: values.consent ? "" : "Необхідна згода",
+  consent: values.consent ? "" : "Треба твоя згода",
 });
 
 export function Form() {
@@ -444,7 +444,10 @@ export function Form() {
           на обробку моїх персональних даних та доступ до моєї кредитної історії
         </Check>
 
-        <Button type="submit" disabled={isSubmitting || !allFieldsDirty || hasErrors}>
+        <Button
+          type="submit"
+          disabled={isSubmitting || !allFieldsDirty || hasErrors}
+        >
           {isSubmitting ? "Відправляємо..." : "Дізнатися"}
         </Button>
       </form>
