@@ -123,13 +123,8 @@ export function Form() {
   const lastOtpCodeRef = useRef<string>("");
 
   const isSuccessResult = useMemo(
-    () =>
-      Boolean(
-        scoreResult?.client_exists ||
-        scoreResult?.decision ||
-        scoreResult?.existing_scoring,
-      ),
-    [scoreResult],
+    () => scoreResult !== null && !scoreError,
+    [scoreResult, scoreError],
   );
 
   useEffect(() => {
@@ -195,6 +190,7 @@ export function Form() {
           });
         } else {
           console.error("Submit error", err);
+          setScoreError(true);
         }
       } finally {
         setIsSubmitting(false);
@@ -219,6 +215,9 @@ export function Form() {
         apiError.type === "validation"
       ) {
         setOtpInvalid(true);
+      } else {
+        setOtpData(null);
+        setScoreError(true);
       }
     }
   }, []);
@@ -231,12 +230,6 @@ export function Form() {
 
   const dismissScoreError = useCallback(() => setScoreError(false), []);
 
-  const retryScore = useCallback(async () => {
-    if (!lastOtpCodeRef.current) return;
-    setScoreResult(null);
-    await handleOtpConfirm(lastOtpCodeRef.current);
-  }, [handleOtpConfirm]);
-
   const dismissOtpInvalid = useCallback(() => setOtpInvalid(false), []);
 
   const resultModalProps = useMemo(() => {
@@ -246,6 +239,9 @@ export function Form() {
         buttonLabel: "Спробувати ще раз",
         onButtonClick: dismissScoreError,
       };
+    }
+    if (!scoreResult) {
+      return null;
     }
     if (scoreResult?.client_exists) {
       return {
@@ -349,11 +345,13 @@ export function Form() {
           onOtpInvalidReset={dismissOtpInvalid}
           phone={phoneRaw}
         />
-        <ResultModal
-          open={resultModalProps !== null}
-          onClose={handleResultClose}
-          {...(resultModalProps ?? {})}
-        />
+        {resultModalProps && (
+          <ResultModal
+            open={resultModalProps !== null}
+            onClose={handleResultClose}
+            {...(resultModalProps ?? {})}
+          />
+        )}
       </Suspense>
       <form className="form" onSubmit={handleSubmit}>
         <h3 className="form__title">Дізнайся свій кредитний ліміт</h3>
