@@ -53,8 +53,7 @@ export function PhoneField({
   const [showPrefix, setShowPrefix] = useState(false);
 
   const digits = extractDigits(value || "");
-  const displayValue =
-    showPrefix && !digits ? PREFIX : formatPhone(digits);
+  const displayValue = showPrefix && !digits ? PREFIX : formatPhone(digits);
 
   useLayoutEffect(() => {
     if (nextCursorPos.current !== null && inputRef.current) {
@@ -164,7 +163,7 @@ export function PhoneField({
       <input
         ref={inputRef}
         type="tel"
-        placeholder="+380 XX XXX XX XX"
+        placeholder="+380 00 000 00 00"
         value={displayValue}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
