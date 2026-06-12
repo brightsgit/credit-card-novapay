@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 const PREFIX = "+380 ";
 
@@ -50,8 +50,11 @@ export function PhoneField({
 }: PhoneFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const nextCursorPos = useRef<number | null>(null);
+  const [showPrefix, setShowPrefix] = useState(false);
 
-  const displayValue = formatPhone(extractDigits(value || ""));
+  const digits = extractDigits(value || "");
+  const displayValue =
+    showPrefix && !digits ? PREFIX : formatPhone(digits);
 
   useLayoutEffect(() => {
     if (nextCursorPos.current !== null && inputRef.current) {
@@ -143,9 +146,14 @@ export function PhoneField({
   };
 
   const handleFocus = () => {
+    if (!digits) {
+      setShowPrefix(true);
+      nextCursorPos.current = PREFIX.length;
+      return;
+    }
     requestAnimationFrame(() => {
       const input = inputRef.current;
-      if (!input || !displayValue) return;
+      if (!input) return;
       const pos = Math.max(input.selectionStart ?? 0, PREFIX.length);
       input.setSelectionRange(pos, pos);
     });
@@ -162,7 +170,10 @@ export function PhoneField({
         onKeyDown={handleKeyDown}
         onFocus={handleFocus}
         onClick={handleClick}
-        onBlur={onBlur}
+        onBlur={() => {
+          setShowPrefix(false);
+          onBlur?.();
+        }}
         className={`field__input${error ? " field__input--error" : ""}`}
       />
       <span className="field__error">{error}</span>
