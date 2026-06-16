@@ -163,6 +163,7 @@ export function PhoneField({
       <input
         ref={inputRef}
         type="tel"
+        inputMode="tel"
         placeholder="+380 00 000 00 00"
         value={displayValue}
         onChange={handleChange}

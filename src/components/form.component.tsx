@@ -78,6 +78,10 @@ const DATA_PATH_TO_FIELD: Record<string, keyof FormFields> = {
   "/monthly_income": "monthlyIncome",
 };
 
+const DATA_PATH_TO_MESSAGE: Partial<Record<string, string>> = {
+  "/taxpayer_id": "Невірний номер ІПН",
+};
+
 const validator = (values: FormFields) => ({
   fullName: FULL_NAME_RE.test(values.fullName.trim())
     ? ""
@@ -195,7 +199,7 @@ export function Form() {
         if (apiError?.errors?.length) {
           apiError.errors.forEach((e) => {
             const field = DATA_PATH_TO_FIELD[e.dataPath];
-            if (field) setFieldError(field, e.message);
+            if (field) setFieldError(field, DATA_PATH_TO_MESSAGE[e.dataPath] ?? e.message);
           });
         } else {
           console.error("Submit error", err);

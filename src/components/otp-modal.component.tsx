@@ -46,6 +46,9 @@ export function OtpModal({
   if (prevOtpData !== otpData) {
     setPrevOtpData(otpData);
     setSecondsLeft(otpData?.resend_available_in_seconds ?? 0);
+    if (prevOtpData !== null) {
+      setDigits(Array(OTP_LENGTH).fill(""));
+    }
   }
 
   useEffect(() => {
