@@ -389,6 +389,7 @@ export function Form() {
           <Field
             name="ipn"
             placeholder="ІПН"
+            inputMode="numeric"
             value={values.ipn}
             onChange={handleIpnChange}
             onBlur={handleIpnBlur}
