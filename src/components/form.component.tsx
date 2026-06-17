@@ -107,6 +107,7 @@ export function Form() {
     resetField,
     checkFormValidity,
     setFieldError,
+    resetForm,
   } = useForm<FormFields>({ initialValues, validator });
 
   const [socialStatuses, setSocialStatuses] = useState<SocialStatus[]>([]);
@@ -193,6 +194,7 @@ export function Form() {
         };
         const result = await sendOtp(request);
         pendingRequestRef.current = request;
+        resetForm();
         setOtpData(result);
       } catch (err) {
         const apiError = err as SendOtpErrorResponse;
