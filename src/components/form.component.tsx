@@ -194,14 +194,17 @@ export function Form() {
         };
         const result = await sendOtp(request);
         pendingRequestRef.current = request;
-        resetForm();
         setOtpData(result);
       } catch (err) {
         const apiError = err as SendOtpErrorResponse;
         if (apiError?.errors?.length) {
           apiError.errors.forEach((e) => {
             const field = DATA_PATH_TO_FIELD[e.dataPath];
-            if (field) setFieldError(field, DATA_PATH_TO_MESSAGE[e.dataPath] ?? e.message);
+            if (field)
+              setFieldError(
+                field,
+                DATA_PATH_TO_MESSAGE[e.dataPath] ?? e.message,
+              );
           });
         } else {
           console.error("Submit error", err);
@@ -222,6 +225,7 @@ export function Form() {
       const result = await score({ ...request, otp_code: otpCode });
       setScoreResult(result);
       setOtpData(null);
+      resetForm();
     } catch (err) {
       const apiError = err as ScoreErrorResponse;
       if (
