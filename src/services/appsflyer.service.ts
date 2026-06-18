@@ -1,6 +1,7 @@
 import {
-  AF_MEDIA_SOURCE_DEFAULT,
+  AF_CUSTOM_PARAMS,
   AF_ONELINK_URL,
+  AF_PARAM_DEFAULTS,
   AF_PARAM_KEYS,
   AF_PARAMS_STORAGE_KEY,
   AF_QR_OPTIONS,
@@ -14,7 +15,19 @@ type AfParamConfig = {
   overrideValues?: Record<string, string>;
 };
 
-type AfParameters = Record<string, AfParamConfig>;
+type AfCustomParam = {
+  paramKey: string;
+  defaultValue?: string;
+};
+
+type AfParameters = {
+  mediaSource?: AfParamConfig;
+  campaign?: AfParamConfig;
+  adSet?: AfParamConfig;
+  deepLinkValue?: AfParamConfig;
+  afSub1?: AfParamConfig;
+  afCustom?: AfCustomParam[];
+};
 
 type GenerateOneLinkConfig = {
   oneLinkURL: string;
@@ -116,17 +129,14 @@ export function loadSmartScript(): Promise<boolean> {
 }
 
 function buildAfParameters(saved: SavedParams): AfParameters {
-  const params: AfParameters = {};
+  const params: Record<string, AfParamConfig> = {};
   for (const [param, keys] of Object.entries(AF_PARAM_KEYS)) {
-    const defaultValue = keys.map((k) => saved[k]).find(Boolean);
+    const captured = keys.map((k) => saved[k]).find(Boolean);
+    const defaultValue = captured ?? AF_PARAM_DEFAULTS[param];
     params[param] = defaultValue ? { keys, defaultValue } : { keys };
   }
 
-  params.mediaSource = {
-    keys: AF_PARAM_KEYS.mediaSource,
-    defaultValue: params.mediaSource?.defaultValue ?? AF_MEDIA_SOURCE_DEFAULT,
-  };
-  return params;
+  return { ...params, afCustom: AF_CUSTOM_PARAMS };
 }
 
 export function generateOneLink(): string | null {
@@ -139,8 +149,10 @@ export function generateOneLink(): string | null {
       oneLinkURL: AF_ONELINK_URL,
       afParameters: buildAfParameters(getSavedParams()),
     };
+
+    console.log("'config', ", config);
     const result = window.AF_SMART_SCRIPT.generateOneLinkURL(config);
-    console.debug("[novapay-form] generateOneLinkURL", config, "->", result);
+    console.log("[novapay-form] generateOneLinkURL", config, "->", result);
     return result?.clickURL ?? null;
   } catch (err) {
     logError("generateOneLinkURL threw", err);
