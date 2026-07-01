@@ -5,6 +5,7 @@ import {
   captureCampaignParams,
   loadSmartScript,
 } from "./services/appsflyer.service";
+import { initTikTokPixel } from "@/utils/track.util";
 
 // Capture AppsFlyer/UTM params from this page's URL and warm up the Smart Script
 // so the OneLink is ready by the time the user reaches the result screen.
@@ -13,6 +14,8 @@ void loadSmartScript();
 
 function mountWidget(hostSelector: string) {
   const host = document.querySelector(hostSelector) ?? document.body;
+
+  initTikTokPixel();
 
   const shadow = host.attachShadow({ mode: "open" });
 
