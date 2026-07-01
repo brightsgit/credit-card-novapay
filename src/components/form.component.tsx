@@ -21,7 +21,7 @@ import {
 import { generateOneLink, loadSmartScript } from "@/services/appsflyer.service";
 import { AF_ONELINK_FALLBACK } from "@/constants/appsflyer.constants";
 import { logError } from "@/lib/monitoring";
-import { trackGa4, trackMetaPixel } from "@/utils/track.util";
+import { trackLeadSuccess } from "@/utils/track.util";
 import type {
   SocialStatus,
   SocialStatusCode,
@@ -226,8 +226,10 @@ export function Form() {
       const result = await score({ ...request, otp_code: otpCode });
       setScoreResult(result);
       setOtpData(null);
-      trackGa4("generate_lead");
-      trackMetaPixel("Lead");
+      void trackLeadSuccess({
+        phone: request.phone_number,
+        externalId: request.taxpayer_id,
+      });
       resetForm();
     } catch (err) {
       const apiError = err as ScoreErrorResponse;
