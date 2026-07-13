@@ -226,10 +226,12 @@ export function Form() {
       const result = await score({ ...request, otp_code: otpCode });
       setScoreResult(result);
       setOtpData(null);
-      void trackLeadSuccess({
-        phone: request.phone_number,
-        externalId: request.taxpayer_id,
-      });
+      if (result.decision) {
+        void trackLeadSuccess({
+          phone: request.phone_number,
+          externalId: request.taxpayer_id,
+        });
+      }
       resetForm();
     } catch (err) {
       const apiError = err as ScoreErrorResponse;
