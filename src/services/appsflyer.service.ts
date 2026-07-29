@@ -61,6 +61,11 @@ const CAPTURE_KEYS = new Set<string>([
   ...Object.values(AF_PARAM_KEYS).flat(),
 ]);
 
+export function getUtmData(): string {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).toString();
+}
+
 function getSavedParams(): SavedParams {
   try {
     const raw = sessionStorage.getItem(AF_PARAMS_STORAGE_KEY);

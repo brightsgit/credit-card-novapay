@@ -18,7 +18,11 @@ import {
   sendOtp,
   score,
 } from "@/services/preapprove.service";
-import { generateOneLink, loadSmartScript } from "@/services/appsflyer.service";
+import {
+  generateOneLink,
+  getUtmData,
+  loadSmartScript,
+} from "@/services/appsflyer.service";
 import { AF_ONELINK_FALLBACK } from "@/constants/appsflyer.constants";
 import { logError } from "@/lib/monitoring";
 import { trackLeadSuccess } from "@/utils/track.util";
@@ -137,29 +141,24 @@ export function Form() {
   const pendingRequestRef = useRef<SendOtpRequest | null>(null);
   const lastOtpCodeRef = useRef<string>("");
 
-  const isSuccessResult = useMemo(
-    () => scoreResult !== null && !scoreError,
-    [scoreResult, scoreError],
-  );
+  const resolveOneLink = useCallback(async (): Promise<{
+    url: string;
+    dynamic: boolean;
+  }> => {
+    const ready = await loadSmartScript();
+    const url = ready ? generateOneLink() : null;
+    if (url) {
+      return { url, dynamic: true };
+    }
+    logError("OneLink unavailable, using fallback", { smartScript: ready });
+    return { url: AF_ONELINK_FALLBACK, dynamic: false };
+  }, []);
 
+  // Preload the Smart Script so the OneLink is ready by the time the
+  // user confirms the OTP and we need it for the score request.
   useEffect(() => {
-    if (!isSuccessResult) return;
-    let cancelled = false;
-    (async () => {
-      const ready = await loadSmartScript();
-      if (cancelled) return;
-      const url = ready ? generateOneLink() : null;
-      if (url) {
-        setOneLink({ url, dynamic: true });
-      } else {
-        logError("OneLink unavailable, using fallback", { smartScript: ready });
-        setOneLink({ url: AF_ONELINK_FALLBACK, dynamic: false });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isSuccessResult]);
+    void loadSmartScript();
+  }, []);
 
   useEffect(() => {
     getPreapproveInputs()
@@ -218,35 +217,45 @@ export function Form() {
     [checkFormValidity, valuesRef, setFieldError],
   );
 
-  const handleOtpConfirm = useCallback(async (otpCode: string) => {
-    const request = pendingRequestRef.current;
-    if (!request) return;
-    lastOtpCodeRef.current = otpCode;
-    try {
-      const result = await score({ ...request, otp_code: otpCode });
-      setScoreResult(result);
-      setOtpData(null);
-      if (result.decision) {
-        void trackLeadSuccess({
-          phone: request.phone_number,
-          externalId: request.taxpayer_id,
+  const handleOtpConfirm = useCallback(
+    async (otpCode: string) => {
+      const request = pendingRequestRef.current;
+      if (!request) return;
+      lastOtpCodeRef.current = otpCode;
+      try {
+        const link = await resolveOneLink();
+        setOneLink(link);
+        const result = await score({
+          ...request,
+          otp_code: otpCode,
+          utm_data: getUtmData(),
+          url: link.url,
         });
-      }
-      resetForm();
-    } catch (err) {
-      const apiError = err as ScoreErrorResponse;
-      if (
-        (apiError?.type === "processing" &&
-          apiError?.code === "OTPCheckFailedError") ||
-        apiError.type === "validation"
-      ) {
-        setOtpInvalid(true);
-      } else {
+        setScoreResult(result);
         setOtpData(null);
-        setScoreError(true);
+        if (result.decision) {
+          void trackLeadSuccess({
+            phone: request.phone_number,
+            externalId: request.taxpayer_id,
+          });
+        }
+        resetForm();
+      } catch (err) {
+        const apiError = err as ScoreErrorResponse;
+        if (
+          (apiError?.type === "processing" &&
+            apiError?.code === "OTPCheckFailedError") ||
+          apiError.type === "validation"
+        ) {
+          setOtpInvalid(true);
+        } else {
+          setOtpData(null);
+          setScoreError(true);
+        }
       }
-    }
-  }, []);
+    },
+    [resolveOneLink, resetForm],
+  );
 
   const handleResultClose = useCallback(() => {
     setScoreError(false);

@@ -82,6 +82,8 @@ export type SendOtpRequest = {
 
 export type ScoreRequest = SendOtpRequest & {
   otp_code: string;
+  utm_data?: string;
+  url?: string;
 };
 
 export type ScoreResponse = {
