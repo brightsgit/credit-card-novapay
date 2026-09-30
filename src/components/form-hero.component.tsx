@@ -10,8 +10,8 @@ export function FormHero() {
       </div>
 
       <div className="form-hero__image-wrap">
-        <img src={`${import.meta.env.VITE_ASSETS_BASE_URL}/form-hero.png`} alt="картка" className="form-hero__image form-hero__image--desktop" />
-        <img src={`${import.meta.env.VITE_ASSETS_BASE_URL}/form-hero-m.png`} alt="картка" className="form-hero__image form-hero__image--mobile" />
+        <img src={`${import.meta.env.VITE_ASSETS_BASE_URL}/card-pic.png`} alt="картка" className="form-hero__image form-hero__image--desktop" />
+        <img src={`${import.meta.env.VITE_ASSETS_BASE_URL}/card-pic-m.png`} alt="картка" className="form-hero__image form-hero__image--mobile" />
       </div>
     </div>
   );
